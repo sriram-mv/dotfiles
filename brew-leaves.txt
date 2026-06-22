@@ -1,0 +1,15 @@
+awscurl
+bat
+fish
+fzf
+go
+httpie
+jq
+mise
+neovim
+nmap
+node
+ripgrep
+tmux
+z
+zoxide

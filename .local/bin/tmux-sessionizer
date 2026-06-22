@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+#
+# tmux-sessionizer: fuzzy-pick a project directory and create-or-attach a
+# tmux session rooted there. Idempotent — never creates duplicate sessions.
+#
+# Usage:
+#   tmux-sessionizer            # interactive fzf picker
+#   tmux-sessionizer <dir>      # jump straight to a specific directory
+#
+# Configure where your projects live by setting TS_SEARCH_ROOTS (colon-
+# separated), e.g. in your shell rc:
+#   export TS_SEARCH_ROOTS="$HOME/projects:$HOME/code:$HOME/work"
+
+set -euo pipefail
+
+# Default roots if TS_SEARCH_ROOTS is not set.
+IFS=':' read -r -a SEARCH_ROOTS <<< "${TS_SEARCH_ROOTS:-$HOME/projects:$HOME/code:$HOME/dev}"
+
+if [[ $# -eq 1 ]]; then
+    selected="$1"
+else
+    selected="$(
+        {
+            for root in "${SEARCH_ROOTS[@]}"; do
+                [[ -d "$root" ]] && find "$root" -mindepth 1 -maxdepth 1 -type d 2>/dev/null
+            done
+            # Include frequently-used dirs from zoxide, if available.
+            command -v zoxide >/dev/null 2>&1 && zoxide query -l 2>/dev/null
+        } | sort -u | fzf --reverse --prompt="project> "
+    )"
+fi
+
+# Nothing picked (user pressed Esc) -> quietly exit.
+[[ -z "${selected:-}" ]] && exit 0
+
+# tmux session names can't contain '.', ':' or spaces — sanitize.
+selected_name="$(basename "$selected" | tr '. :' '___')"
+
+tmux_running="$(pgrep tmux || true)"
+
+# Case 1: not inside tmux AND no server running -> create + attach.
+if [[ -z "${TMUX:-}" ]] && [[ -z "$tmux_running" ]]; then
+    tmux new-session -s "$selected_name" -c "$selected"
+    exit 0
+fi
+
+# Create the session (detached) if it doesn't already exist.
+if ! tmux has-session -t="$selected_name" 2>/dev/null; then
+    tmux new-session -ds "$selected_name" -c "$selected"
+fi
+
+# Attach (from outside tmux) or switch (from inside tmux).
+if [[ -z "${TMUX:-}" ]]; then
+    tmux attach -t "$selected_name"
+else
+    tmux switch-client -t "$selected_name"
+fi
