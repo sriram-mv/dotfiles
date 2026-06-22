@@ -20,6 +20,9 @@ end
 
 alias v='nvim'
 
+# Vi key bindings (enables N/V/I mode; shown via fishline's VFISH segment)
+set -g fish_key_bindings fish_vi_key_bindings
+
 # zoxide (smarter cd)
 if command -v zoxide >/dev/null 2>&1
     zoxide init fish | source
