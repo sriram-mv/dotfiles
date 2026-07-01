@@ -16,6 +16,7 @@ FILES=(
   ".config/nvim"
   ".config/fish"
   ".config/mise"
+  ".config/ghostty"
   ".local/bin/tmux-sessionizer"
 )
 
@@ -97,5 +98,4 @@ fi
 echo ""
 echo "==> Done."
 echo "    - Set your email in ~/.gitconfig"
-echo "    - Set your terminal's font to a Nerd Font (e.g. MesloLGS NF) for fishline's glyphs"
 echo "    - Install tmux plugins (TPM): prefix + I inside tmux"
