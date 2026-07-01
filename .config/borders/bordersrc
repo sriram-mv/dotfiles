@@ -1,0 +1,6 @@
+#!/bin/bash
+
+borders active_color=0xffb4befe \
+        inactive_color=0xff585b70 \
+        width=5.0 \
+        style=round

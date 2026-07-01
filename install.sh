@@ -3,10 +3,10 @@
 # Bootstrap dotfiles into $HOME. Backs up any existing files first.
 #
 # Order matters: every external tool the configs depend on (Homebrew
-# packages, rustup, oh-my-zsh, fishline, TPM) is installed *before* any
-# dotfile is symlinked, so nothing sources a tool that isn't there yet.
-# TPM's plugin install is the one exception - it reads ~/.tmux.conf, so it
-# runs after the symlink step.
+# packages, rustup, oh-my-zsh, fishline, TPM, borders) is installed *before*
+# any dotfile is symlinked, so nothing sources a tool that isn't there yet.
+# TPM's plugin install and starting the borders service are exceptions -
+# both read config files that only exist after the symlink step.
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "$0")" && pwd)"
@@ -23,6 +23,7 @@ FILES=(
   ".config/fish"
   ".config/mise"
   ".config/ghostty"
+  ".config/borders"
   ".local/bin/tmux-sessionizer"
 )
 
@@ -82,6 +83,13 @@ EOF
   fi
 
   PATH="$RUSTUP_BIN:$PATH" rustup default stable
+
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "==> Installing borders (focused-window halo)"
+    brew tap FelixKratz/formulae
+    brew trust --tap FelixKratz/formulae
+    brew install borders
+  fi
 else
   echo "==> Homebrew install failed or skipped; run brew/rustup/font steps manually later"
 fi
@@ -126,6 +134,11 @@ if command -v tmux >/dev/null 2>&1 && [ -x "$HOME/.tmux/plugins/tpm/bin/install_
   tmux start-server
   tmux source-file "$HOME/.tmux.conf"
   "$HOME/.tmux/plugins/tpm/bin/install_plugins"
+fi
+
+if command -v brew >/dev/null 2>&1 && brew list borders >/dev/null 2>&1; then
+  echo "==> Starting borders"
+  brew services start felixkratz/formulae/borders
 fi
 
 echo ""
