@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 #
 # Bootstrap dotfiles into $HOME. Backs up any existing files first.
+#
+# Order matters: every external tool the configs depend on (Homebrew
+# packages, rustup, oh-my-zsh, fishline, TPM) is installed *before* any
+# dotfile is symlinked, so nothing sources a tool that isn't there yet.
+# TPM's plugin install is the one exception - it reads ~/.tmux.conf, so it
+# runs after the symlink step.
 set -euo pipefail
 
 DOTFILES="$(cd "$(dirname "$0")" && pwd)"
@@ -20,25 +26,10 @@ FILES=(
   ".local/bin/tmux-sessionizer"
 )
 
+### --- Phase 1: install tools -----------------------------------------
+
 echo "==> Pulling in submodules (fishline, etc.)"
 git -C "$DOTFILES" submodule update --init --recursive
-
-echo "==> Installing dotfiles from $DOTFILES"
-for rel in "${FILES[@]}"; do
-  src="$DOTFILES/$rel"
-  dst="$HOME/$rel"
-  [ -e "$src" ] || continue
-  if [ -e "$dst" ] && [ ! -L "$dst" ]; then
-    mkdir -p "$BACKUP/$(dirname "$rel")"
-    mv "$dst" "$BACKUP/$rel"
-    echo "    backed up existing $rel -> $BACKUP/$rel"
-  fi
-  mkdir -p "$(dirname "$dst")"
-  ln -sfn "$src" "$dst"
-  echo "    linked $rel"
-done
-
-chmod +x "$HOME/.local/bin/tmux-sessionizer" 2>/dev/null || true
 
 # Homebrew (Apple Silicon, Intel mac, or Linux)
 if [ -x /opt/homebrew/bin/brew ]; then
@@ -92,10 +83,51 @@ EOF
 
   PATH="$RUSTUP_BIN:$PATH" rustup default stable
 else
-  echo "==> Homebrew install failed or skipped; run brew steps manually later"
+  echo "==> Homebrew install failed or skipped; run brew/rustup/font steps manually later"
+fi
+
+echo "==> Installing oh-my-zsh"
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+fi
+
+echo "==> Installing TPM (tmux plugin manager)"
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+  git clone https://github.com/tmux-plugins/tpm "$HOME/.tmux/plugins/tpm"
+fi
+
+### --- Phase 2: link dotfiles -------------------------------------------
+
+echo "==> Linking dotfiles from $DOTFILES"
+for rel in "${FILES[@]}"; do
+  src="$DOTFILES/$rel"
+  dst="$HOME/$rel"
+  [ -e "$src" ] || continue
+  if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+    echo "    already linked $rel"
+    continue
+  fi
+  if [ -e "$dst" ] && [ ! -L "$dst" ]; then
+    mkdir -p "$BACKUP/$(dirname "$rel")"
+    mv "$dst" "$BACKUP/$rel"
+    echo "    backed up existing $rel -> $BACKUP/$rel"
+  fi
+  mkdir -p "$(dirname "$dst")"
+  ln -sfn "$src" "$dst"
+  echo "    linked $rel"
+done
+
+chmod +x "$HOME/.local/bin/tmux-sessionizer" 2>/dev/null || true
+
+### --- Phase 3: populate tmux plugins (needs ~/.tmux.conf linked above) -
+
+if command -v tmux >/dev/null 2>&1 && [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+  echo "==> Installing tmux plugins via TPM"
+  tmux start-server
+  tmux source-file "$HOME/.tmux.conf"
+  "$HOME/.tmux/plugins/tpm/bin/install_plugins"
 fi
 
 echo ""
 echo "==> Done."
 echo "    - Set your email in ~/.gitconfig"
-echo "    - Install tmux plugins (TPM): prefix + I inside tmux"
