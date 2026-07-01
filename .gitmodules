@@ -1,0 +1,3 @@
+[submodule ".config/fish/fishline"]
+	path = .config/fish/fishline
+	url = https://github.com/0rax/fishline.git
