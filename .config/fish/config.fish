@@ -20,6 +20,14 @@ end
 
 alias v='nvim'
 
+# eza (modern ls replacement)
+if command -v eza >/dev/null 2>&1
+    alias ls='eza --icons'
+    alias ll='eza -l --icons --git'
+    alias la='eza -la --icons --git'
+    alias lt='eza --tree --icons'
+end
+
 # Vi key bindings (enables N/V/I mode; shown via fishline's VFISH segment)
 set -g fish_key_bindings fish_vi_key_bindings
 

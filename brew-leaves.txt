@@ -1,8 +1,10 @@
 awscurl
 bat
+eza
 fish
 fzf
 gh
+git-delta
 go
 httpie
 jq
