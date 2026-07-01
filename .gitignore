@@ -6,6 +6,9 @@
 # Local-only or machine-specific state — do not publish
 .config/fish/fish_variables
 .config/fish/conf.d/fish_frozen_*.fish
+.config/fish/conf.d/00_fig_pre.fish
+.config/fish/conf.d/99_fig_post.fish
+.config/nvim/lazy-lock.json
 
 # Secrets / credentials (never commit)
 *.pem
