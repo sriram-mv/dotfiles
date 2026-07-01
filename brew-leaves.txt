@@ -2,6 +2,7 @@ awscurl
 bat
 fish
 fzf
+gh
 go
 httpie
 jq
